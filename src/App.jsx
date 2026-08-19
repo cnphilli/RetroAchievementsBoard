@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import './App.css'
 import { gameIds, users as trackedUsers } from './dashboardConfig'
 
@@ -8,7 +8,6 @@ function App() {
   const [dashboard, setDashboard] = useState(null)
   const [status, setStatus] = useState('Loading RetroAchievements data...')
   const [error, setError] = useState('')
-  const [isHardPulling, setIsHardPulling] = useState(false)
 
   useEffect(() => {
     loadDashboard()
@@ -31,13 +30,38 @@ function App() {
     return { achieved, possible }
   }, [dashboard])
 
-  async function loadDashboard({ force = false } = {}) {
+  const raceEntries = useMemo(() => {
+    if (!dashboard) return []
+
+    return dashboard.users
+      .map((user) => {
+        let achieved = 0
+        let possible = 0
+
+        for (const game of dashboard.games) {
+          const cell = getProgress(dashboard.progress, user.username, game.id)
+          achieved += Number(cell?.numAchievedHardcore ?? cell?.numAchieved ?? 0)
+          possible += Number(cell?.numPossibleAchievements ?? game.totalAchievements ?? 0)
+        }
+
+        return {
+          achieved,
+          avatar: user.avatar,
+          displayUsername: user.displayUsername || user.username,
+          percent: possible ? (achieved / possible) * 100 : 0,
+          possible,
+          username: user.username,
+        }
+      })
+      .sort((a, b) => a.percent - b.percent)
+  }, [dashboard])
+
+  async function loadDashboard() {
     setError('')
-    setStatus(force ? 'Hard pull in progress...' : 'Loading RetroAchievements data...')
-    setIsHardPulling(force)
+    setStatus('Loading RetroAchievements data...')
 
     try {
-      const response = await fetch(`/api/ra-dashboard${force ? '?force=1' : ''}`)
+      const response = await fetch('/api/ra-dashboard')
       const contentType = response.headers.get('content-type') || ''
       if (!contentType.includes('application/json')) {
         throw new Error(
@@ -54,13 +78,13 @@ function App() {
 
       setDashboard(payload.dashboard ?? payload)
       setStatus(
-        `${statusLabel(payload)} at ${formatTime(payload.cachedAt)}`,
+        `Achievement progress last downloaded from RetroAchievements at ${formatTime(
+          payload.progressFetchedAt,
+        )}`,
       )
     } catch (err) {
       setError(err.message)
       setStatus('Could not update data.')
-    } finally {
-      setIsHardPulling(false)
     }
   }
 
@@ -101,7 +125,7 @@ function App() {
           <div className="dashboard-header">
             <div>
               <p className="eyebrow">Year of Achievements Progress Tracker</p>
-              <h1>Super Illegal Entertainment System</h1>
+              <RaceTrack entries={raceEntries} />
             </div>
             <div className="summary-strip">
               <span>{trackedUsers.length} users</span>
@@ -115,7 +139,7 @@ function App() {
           {error && <div className="status-message error">{error}</div>}
           <div className="status-message">{status}</div>
 
-      {dashboard ? (
+          {dashboard ? (
             <AchievementTable dashboard={dashboard} />
           ) : (
             <div className="loading-box">Fetching profiles, games, and progress...</div>
@@ -123,93 +147,144 @@ function App() {
         </section>
       </main>
 
-      <button
-        className="hard-pull-button"
-        disabled={isHardPulling}
-        type="button"
-        onClick={() => loadDashboard({ force: true })}
-      >
-        {isHardPulling ? 'Pulling...' : 'Hard Pull'}
-      </button>
+    </div>
+  )
+}
+
+function RaceTrack({ entries }) {
+  return (
+    <div className="race-track" aria-label="Overall achievement progress race">
+      <span className="race-label race-label-start">0%</span>
+      <span className="race-label race-label-finish">100%</span>
+      <div className="race-line" aria-hidden="true" />
+      {entries.map((entry, index) => (
+        <div
+          className="race-runner"
+          key={entry.username}
+          style={{
+            left: `${Math.max(0, Math.min(100, entry.percent))}%`,
+            zIndex: 10 + index,
+          }}
+        >
+          {entry.avatar ? (
+            <img src={entry.avatar} alt="" />
+          ) : (
+            <span>{entry.displayUsername.slice(0, 2).toUpperCase()}</span>
+          )}
+          <div className="race-tooltip">
+            <strong>{entry.displayUsername}</strong>
+            <small>
+              {entry.achieved}/{entry.possible} achievements (
+              {Math.round(entry.percent)}%)
+            </small>
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
 
 function AchievementTable({ dashboard }) {
-  return (
-    <div className="table-frame">
-      <table className="achievement-table">
-        <thead>
-          <tr>
-            <th className="user-column">User</th>
-            {dashboard.games.map((game) => (
-              <th key={game.id}>
-                <a
-                  className="game-heading"
-                  href={`https://retroachievements.org/game/${game.id}`}
-                  target="_blank"
-                >
-                  {game.boxArt && <img src={game.boxArt} alt="" />}
-                  <span>{game.title}</span>
-                  <small>{game.system}</small>
-                </a>
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {dashboard.users.map((user) => (
-            <tr key={user.username}>
-              <th className="user-card" scope="row">
-                <a
-                  className="user-link"
-                  href={`https://retroachievements.org/user/${user.username}`}
-                  target="_blank"
-                >
-                  {user.avatar && <img src={user.avatar} alt="" />}
-                  <span>
-                    <strong>{user.displayUsername || user.username}</strong>
-                    <small>
-                      {user.missing
-                        ? 'Profile not found'
-                        : `${user.totalPoints.toLocaleString()} points`}
-                    </small>
-                  </span>
-                </a>
-                {user.motto && <p>{user.motto}</p>}
-              </th>
-              {dashboard.games.map((game) => {
-                const progress = getProgress(
-                  dashboard.progress,
-                  user.username,
-                  game.id,
-                )
-                const achieved = Number(
-                  progress?.numAchievedHardcore ?? progress?.numAchieved ?? 0,
-                )
-                const possible = Number(
-                  progress?.numPossibleAchievements ?? game.totalAchievements ?? 0,
-                )
-                const percent = possible ? Math.round((achieved / possible) * 100) : 0
+  const headerRef = useRef(null)
+  const usersRef = useRef(null)
 
-                return (
-                  <td key={`${user.username}-${game.id}`}>
-                    <div className="progress-cell">
-                      <strong>
-                        {achieved}/{possible}
-                      </strong>
-                      <span>{percent}%</span>
-                      <div className="meter" aria-hidden="true">
-                        <div style={{ width: `${percent}%` }} />
-                      </div>
-                    </div>
-                  </td>
-                )
-              })}
-            </tr>
+  function syncScroll(event) {
+    if (headerRef.current) headerRef.current.scrollLeft = event.currentTarget.scrollLeft
+    if (usersRef.current) usersRef.current.scrollTop = event.currentTarget.scrollTop
+  }
+
+  return (
+    <div
+      className="table-frame"
+      style={{
+        '--game-area-width': `${dashboard.games.length * 11.7}rem`,
+        '--game-count': dashboard.games.length,
+        '--user-count': dashboard.users.length,
+      }}
+    >
+      <div className="table-corner">User</div>
+
+      <div className="table-header-scroll" ref={headerRef}>
+        <div className="game-header-row">
+          {dashboard.games.map((game) => (
+            <a
+              className="game-heading"
+              href={`https://retroachievements.org/game/${game.id}`}
+              key={game.id}
+              target="_blank"
+            >
+              {game.boxArt && <img src={game.boxArt} alt="" />}
+              <span>{game.title}</span>
+              <small>{game.system}</small>
+            </a>
           ))}
-        </tbody>
-      </table>
+        </div>
+      </div>
+
+      <div className="table-users-scroll" ref={usersRef}>
+        {dashboard.users.map((user) => (
+          <UserCard key={user.username} user={user} />
+        ))}
+      </div>
+
+      <div className="table-body-scroll" onScroll={syncScroll}>
+        <div
+          className="progress-grid"
+          style={{
+            gridTemplateColumns: `repeat(${dashboard.games.length}, var(--game-col-width))`,
+          }}
+        >
+          {dashboard.users.map((user) =>
+            dashboard.games.map((game) => {
+              const progress = getProgress(dashboard.progress, user.username, game.id)
+              const achieved = Number(
+                progress?.numAchievedHardcore ?? progress?.numAchieved ?? 0,
+              )
+              const possible = Number(
+                progress?.numPossibleAchievements ?? game.totalAchievements ?? 0,
+              )
+              const percent = possible ? Math.round((achieved / possible) * 100) : 0
+
+              return (
+                <div className="progress-cell" key={`${user.username}-${game.id}`}>
+                  <strong>
+                    {achieved}/{possible}
+                  </strong>
+                  <div className="progress-inline">
+                    <span>{percent}%</span>
+                    <div className="meter" aria-hidden="true">
+                      <div style={{ width: `${percent}%` }} />
+                    </div>
+                  </div>
+                </div>
+              )
+            }),
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function UserCard({ user }) {
+  return (
+    <div className="user-card">
+      <a
+        className="user-link"
+        href={`https://retroachievements.org/user/${user.username}`}
+        target="_blank"
+      >
+        {user.avatar && <img src={user.avatar} alt="" />}
+        <span>
+          <strong>{user.displayUsername || user.username}</strong>
+          <small>
+            {user.missing
+              ? 'Profile not found'
+              : `${user.totalPoints.toLocaleString()} points`}
+          </small>
+        </span>
+      </a>
+      {user.motto && <p>{user.motto}</p>}
     </div>
   )
 }
@@ -225,13 +300,6 @@ function formatTime(value) {
     minute: '2-digit',
     second: '2-digit',
   }).format(new Date(value))
-}
-
-function statusLabel(payload) {
-  if (payload.source === 'sqlite') return 'Loaded from SQLite'
-  if (payload.source === 'hard-pull') return 'Hard pull updated progress'
-  if (payload.source === 'retroachievements') return 'Updated from RetroAchievements'
-  return 'Loaded'
 }
 
 export default App

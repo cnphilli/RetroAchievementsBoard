@@ -7,6 +7,10 @@
     "dev": "node dev-server.mjs",
     "dev:vite": "vite",
     "build": "vite build",
+    "cf:deploy": "wrangler pages deploy dist --project-name retroachievements-board",
+    "d1:create": "wrangler d1 create ra-achievements-cache",
+    "d1:migrate:local": "wrangler d1 migrations apply ra-achievements-cache --local",
+    "d1:migrate:remote": "wrangler d1 migrations apply ra-achievements-cache --remote",
     "lint": "oxlint",
     "preview": "vite preview"
   },
@@ -19,6 +23,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
     "oxlint": "^1.75.0",
-    "vite": "^8.2.0"
+    "vite": "^8.2.0",
+    "wrangler": "^4.124.0"
   }
 }

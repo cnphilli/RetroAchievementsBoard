@@ -1,0 +1,8 @@
+name = "retroachievements-board"
+compatibility_date = "2026-08-19"
+pages_build_output_dir = "dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ra-achievements-cache"
+database_id = "5686adad-4c62-4b9a-bb51-54a76e7cdc3a"

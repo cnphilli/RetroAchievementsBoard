@@ -10,10 +10,8 @@ const PORT = Number(process.env.PORT || 5173)
 const RA_API_BASE = 'https://retroachievements.org/API'
 const PROFILE_TTL_MS = 24 * 60 * 60 * 1000
 const PROGRESS_TTL_MS = 15 * 60 * 1000
-const HARD_PULL_COOLDOWN_MS = 60 * 1000
 const DB_PATH = path.resolve('data', 'ra-cache.sqlite')
 
-let lastHardPullAt = 0
 let inFlightRefresh = null
 
 loadLocalEnv()
@@ -58,34 +56,20 @@ async function handleDashboard(req, res, url) {
     return
   }
 
-  const forceProgress = url.searchParams.get('force') === '1'
-  const now = Date.now()
-
-  if (forceProgress && now - lastHardPullAt < HARD_PULL_COOLDOWN_MS) {
-    sendJson(res, 429, {
-      error: `Hard pull cooldown active. Try again in ${Math.ceil(
-        (HARD_PULL_COOLDOWN_MS - (now - lastHardPullAt)) / 1000,
-      )} seconds.`,
-      dashboard: buildDashboardFromDb('rate-limited'),
-    })
-    return
-  }
-
   if (!inFlightRefresh) {
-    if (forceProgress) lastHardPullAt = now
-    inFlightRefresh = refreshExpiredData(apiKey, forceProgress).finally(() => {
+    inFlightRefresh = refreshExpiredData(apiKey).finally(() => {
       inFlightRefresh = null
     })
   }
 
   const refreshSummary = await inFlightRefresh
   sendJson(res, 200, {
-    ...buildDashboardFromDb(forceProgress ? 'hard-pull' : refreshSummary.source),
+    ...buildDashboardFromDb(refreshSummary.source),
     refreshSummary,
   })
 }
 
-async function refreshExpiredData(apiKey, forceProgress) {
+async function refreshExpiredData(apiKey) {
   const now = Date.now()
   const summary = {
     source: 'sqlite',
@@ -95,7 +79,7 @@ async function refreshExpiredData(apiKey, forceProgress) {
     guardrails: {
       games: 'fetch once, then keep forever',
       profiles: 'refresh after 24 hours',
-      progress: 'refresh after 15 minutes, or on Hard Pull',
+      progress: 'refresh after 15 minutes',
     },
   }
 
@@ -143,7 +127,7 @@ async function refreshExpiredData(apiKey, forceProgress) {
       summary.profilesFetched += 1
     }
 
-    if (forceProgress || progressExpired(username, now)) {
+    if (progressExpired(username, now)) {
       const progress = await fetchRa(
         'API_GetUserProgress.php',
         { u: username, i: gameIds.join(','), y: apiKey },
@@ -169,6 +153,7 @@ function buildDashboardFromDb(source) {
   const progress = {}
   const progressFetchedAts = progressRows.map((row) => row.fetchedAt)
   const profileFetchedAts = profiles.map((row) => row.fetchedAt)
+  const lastProgressFetchedAt = Math.max(0, ...progressFetchedAts)
 
   for (const row of progressRows) {
     progress[row.username] ??= {}
@@ -189,6 +174,9 @@ function buildDashboardFromDb(source) {
     source,
     dbPath: DB_PATH,
     cachedAt: new Date(Math.max(0, ...progressFetchedAts, ...profileFetchedAts)).toISOString(),
+    progressFetchedAt: lastProgressFetchedAt
+      ? new Date(lastProgressFetchedAt).toISOString()
+      : null,
     refreshedAt: new Date().toISOString(),
   }
 }
@@ -317,11 +305,19 @@ function allProfiles() {
     )
     .all()
 
-  return users.map((username) => {
-    const row = rows.find((profile) => profile.username === username)
-    if (!row) return { username, displayUsername: username, missing: true, totalPoints: 0 }
-    return { ...row, missing: Boolean(row.missing) }
-  })
+  return users
+    .map((username) => {
+      const row = rows.find((profile) => profile.username === username)
+      if (!row) return { username, displayUsername: username, missing: true, totalPoints: 0 }
+      return { ...row, missing: Boolean(row.missing) }
+    })
+    .sort((a, b) =>
+      (a.displayUsername || a.username).localeCompare(
+        b.displayUsername || b.username,
+        undefined,
+        { sensitivity: 'base' },
+      ),
+    )
 }
 
 function upsertProfile(profile) {
