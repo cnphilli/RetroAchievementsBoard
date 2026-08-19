@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node dev-server.mjs",
+    "dev:vite": "vite",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview"
