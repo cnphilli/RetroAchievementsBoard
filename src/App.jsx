@@ -140,7 +140,14 @@ function App() {
           <div className="status-message">{status}</div>
 
           {dashboard ? (
-            <AchievementTable dashboard={dashboard} />
+            <>
+              <div className="d-none d-md-block">
+                <AchievementTable dashboard={dashboard} />
+              </div>
+              <div className="d-block d-md-none">
+                <MobileAchievementLayout dashboard={dashboard} />
+              </div>
+            </>
           ) : (
             <div className="loading-box">Fetching profiles, games, and progress...</div>
           )}
@@ -184,6 +191,75 @@ function RaceTrack({ entries }) {
   )
 }
 
+function MobileAchievementLayout({ dashboard }) {
+  return (
+    <div className="mobile-achievement-layout">
+      {dashboard.users.map((user) => {
+        const total = getUserTotal(dashboard, user)
+
+        return (
+          <section className="mobile-user-section" key={user.username}>
+            <div className="mobile-user-heading">
+              <a
+                className="mobile-user-link"
+                href={`https://retroachievements.org/user/${user.username}`}
+                target="_blank"
+              >
+                {user.avatar && <img src={user.avatar} alt="" />}
+                <span>
+                  <strong>{user.displayUsername || user.username}</strong>
+                  <small>
+                    {user.missing
+                      ? 'Profile not found'
+                      : `${user.totalPoints.toLocaleString()} points`}
+                  </small>
+                </span>
+              </a>
+              <div className="mobile-user-total">
+                <strong>{total.percent}%</strong>
+                <span>
+                  {total.achieved}/{total.possible}
+                </span>
+              </div>
+            </div>
+
+            <div className="mobile-total-meter meter" aria-hidden="true">
+              <div style={{ width: `${total.percent}%` }} />
+            </div>
+
+            <div className="mobile-game-list">
+              {dashboard.games.map((game) => {
+                const stats = getGameProgressStats(dashboard, user.username, game)
+
+                return (
+                  <a
+                    className="mobile-game-row"
+                    href={`https://retroachievements.org/game/${game.id}`}
+                    key={`${user.username}-${game.id}`}
+                    target="_blank"
+                  >
+                    {game.boxArt && <img src={game.boxArt} alt="" />}
+                    <span className="mobile-game-copy">
+                      <strong>{game.title}</strong>
+                      <small>{game.system}</small>
+                    </span>
+                    <span className="mobile-game-progress">
+                      <strong>
+                        {stats.achieved}/{stats.possible}
+                      </strong>
+                      <small>{stats.percent}%</small>
+                    </span>
+                  </a>
+                )
+              })}
+            </div>
+          </section>
+        )
+      })}
+    </div>
+  )
+}
+
 function AchievementTable({ dashboard }) {
   const headerRef = useRef(null)
   const usersRef = useRef(null)
@@ -223,7 +299,7 @@ function AchievementTable({ dashboard }) {
 
       <div className="table-users-scroll" ref={usersRef}>
         {dashboard.users.map((user) => (
-          <UserCard key={user.username} user={user} />
+          <UserCard dashboard={dashboard} key={user.username} user={user} />
         ))}
       </div>
 
@@ -266,24 +342,37 @@ function AchievementTable({ dashboard }) {
   )
 }
 
-function UserCard({ user }) {
+function UserCard({ dashboard, user }) {
+  const total = getUserTotal(dashboard, user)
+
   return (
     <div className="user-card">
-      <a
-        className="user-link"
-        href={`https://retroachievements.org/user/${user.username}`}
-        target="_blank"
-      >
-        {user.avatar && <img src={user.avatar} alt="" />}
-        <span>
-          <strong>{user.displayUsername || user.username}</strong>
-          <small>
-            {user.missing
-              ? 'Profile not found'
-              : `${user.totalPoints.toLocaleString()} points`}
-          </small>
-        </span>
-      </a>
+      <div className="desktop-user-row">
+        <a
+          className="user-link"
+          href={`https://retroachievements.org/user/${user.username}`}
+          target="_blank"
+        >
+          {user.avatar && <img src={user.avatar} alt="" />}
+          <span>
+            <strong>{user.displayUsername || user.username}</strong>
+            <small>
+              {user.missing
+                ? 'Profile not found'
+                : `${user.totalPoints.toLocaleString()} points`}
+            </small>
+          </span>
+        </a>
+        <div className="desktop-user-total">
+          <strong>{total.percent}%</strong>
+          <span>
+            {total.achieved}/{total.possible}
+          </span>
+        </div>
+      </div>
+      <div className="desktop-total-meter meter" aria-hidden="true">
+        <div style={{ width: `${total.percent}%` }} />
+      </div>
       {user.motto && <p>{user.motto}</p>}
     </div>
   )
@@ -291,6 +380,37 @@ function UserCard({ user }) {
 
 function getProgress(progress, username, gameId) {
   return progress?.[username]?.[gameId] ?? progress?.[username]?.[String(gameId)]
+}
+
+function getGameProgressStats(dashboard, username, game) {
+  const progress = getProgress(dashboard.progress, username, game.id)
+  const achieved = Number(progress?.numAchievedHardcore ?? progress?.numAchieved ?? 0)
+  const possible = Number(
+    progress?.numPossibleAchievements ?? game.totalAchievements ?? 0,
+  )
+
+  return {
+    achieved,
+    percent: possible ? Math.round((achieved / possible) * 100) : 0,
+    possible,
+  }
+}
+
+function getUserTotal(dashboard, user) {
+  let achieved = 0
+  let possible = 0
+
+  for (const game of dashboard.games) {
+    const stats = getGameProgressStats(dashboard, user.username, game)
+    achieved += stats.achieved
+    possible += stats.possible
+  }
+
+  return {
+    achieved,
+    percent: possible ? Math.round((achieved / possible) * 100) : 0,
+    possible,
+  }
 }
 
 function formatTime(value) {

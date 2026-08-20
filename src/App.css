@@ -420,6 +420,13 @@
 .user-link span {
   display: grid;
   gap: 0.15rem;
+  min-width: 0;
+}
+
+.user-link strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .user-link small {
@@ -431,7 +438,7 @@
   border-bottom: 1px solid #303746;
   height: var(--body-row-height);
   overflow: hidden;
-  padding: 0.75rem;
+  padding: 0.55rem 0.75rem;
 }
 
 .user-card p {
@@ -439,6 +446,36 @@
   font-size: 0.78rem;
   line-height: 1.35;
   margin: 0.35rem 0 0;
+}
+
+.desktop-user-row {
+  align-items: center;
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.desktop-user-total {
+  display: grid;
+  justify-items: end;
+  line-height: 1.05;
+  min-width: 3rem;
+}
+
+.desktop-user-total strong {
+  color: #f5f7fb;
+  font-size: 0.92rem;
+}
+
+.desktop-user-total span {
+  color: #aeb6c5;
+  font-size: 0.67rem;
+  font-weight: 800;
+}
+
+.desktop-total-meter {
+  height: 0.28rem;
+  margin-top: 0.35rem;
 }
 
 .progress-cell {
@@ -479,6 +516,135 @@
 .meter div {
   background: linear-gradient(90deg, #cf2727, #d8a526);
   height: 100%;
+}
+
+.mobile-achievement-layout {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.mobile-user-section {
+  background: rgba(16, 19, 26, 0.72);
+  border: 1px solid #363e4d;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.mobile-user-heading {
+  align-items: center;
+  border-bottom: 1px solid #303746;
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 0.75rem;
+}
+
+.mobile-user-link {
+  align-items: center;
+  color: #f5f7fb;
+  display: flex;
+  gap: 0.65rem;
+  min-width: 0;
+  text-decoration: none;
+}
+
+.mobile-user-link img {
+  border: 1px solid #454e5f;
+  border-radius: 4px;
+  height: 2.75rem;
+  object-fit: cover;
+  width: 2.75rem;
+}
+
+.mobile-user-link span {
+  display: grid;
+  min-width: 0;
+}
+
+.mobile-user-link strong,
+.mobile-game-copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-user-link small,
+.mobile-game-copy small,
+.mobile-game-progress small {
+  color: #d8a526;
+  font-size: 0.74rem;
+}
+
+.mobile-user-total {
+  display: grid;
+  justify-items: end;
+  line-height: 1.1;
+}
+
+.mobile-user-total strong {
+  color: #f5f7fb;
+  font-size: 1.25rem;
+}
+
+.mobile-user-total span {
+  color: #aeb6c5;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.mobile-total-meter {
+  border-radius: 0;
+  height: 0.35rem;
+}
+
+.mobile-game-list {
+  display: grid;
+}
+
+.mobile-game-row {
+  align-items: center;
+  border-top: 1px solid #303746;
+  color: #f5f7fb;
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: 2.55rem minmax(0, 1fr) auto;
+  min-width: 0;
+  padding: 0.55rem 0.75rem;
+  text-decoration: none;
+}
+
+.mobile-game-row:first-child {
+  border-top: 0;
+}
+
+.mobile-game-row img {
+  aspect-ratio: 3 / 4;
+  border: 1px solid #454e5f;
+  border-radius: 4px;
+  object-fit: cover;
+  width: 2.55rem;
+}
+
+.mobile-game-copy {
+  display: grid;
+  min-width: 0;
+}
+
+.mobile-game-copy strong {
+  font-size: 0.88rem;
+  line-height: 1.2;
+}
+
+.mobile-game-progress {
+  display: grid;
+  justify-items: end;
+  line-height: 1.1;
+  min-width: 3.4rem;
+}
+
+.mobile-game-progress strong {
+  color: #f5f7fb;
+  font-size: 0.9rem;
 }
 
 @media (max-width: 960px) {
@@ -523,5 +689,13 @@
     margin-right: 0;
     min-width: 0;
     width: 100%;
+  }
+
+  .mobile-user-heading {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mobile-user-total {
+    justify-items: start;
   }
 }
