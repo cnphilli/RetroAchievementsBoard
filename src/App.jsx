@@ -124,7 +124,10 @@ function App() {
         <section className="welcome-panel">
           <div className="dashboard-header">
             <div>
-              <p className="eyebrow">Year of Achievements Progress Tracker</p>
+              <div className="tracker-title">
+                <img src="/assets/yoa.png" alt="" />
+                <p className="eyebrow">Year of Achievements Progress Tracker</p>
+              </div>
               <RaceTrack entries={raceEntries} />
             </div>
             <div className="summary-strip">

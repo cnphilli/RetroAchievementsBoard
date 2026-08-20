@@ -1,7 +1,8 @@
 export const users = [
   'SirHoundSound',
   'RizzleRazzle',
-  'Rafiki17',
+  'tcunningham425',
+  'wilsef',
   'Pinewood74',
   'ColliWobbl',
 ]
