@@ -48,6 +48,7 @@ function App() {
           achieved,
           avatar: user.avatar,
           displayUsername: user.displayUsername || user.username,
+          fetchedAt: user.fetchedAt,
           percent: possible ? (achieved / possible) * 100 : 0,
           possible,
           username: user.username,
@@ -177,7 +178,7 @@ function RaceTrack({ entries }) {
           }}
         >
           {entry.avatar ? (
-            <img src={entry.avatar} alt="" />
+            <img src={avatarUrl(entry)} alt="" />
           ) : (
             <span>{entry.displayUsername.slice(0, 2).toUpperCase()}</span>
           )}
@@ -208,7 +209,7 @@ function MobileAchievementLayout({ dashboard }) {
                 href={`https://retroachievements.org/user/${user.username}`}
                 target="_blank"
               >
-                {user.avatar && <img src={user.avatar} alt="" />}
+                {user.avatar && <img src={avatarUrl(user)} alt="" />}
                 <span>
                   <strong>{user.displayUsername || user.username}</strong>
                   <small>
@@ -356,7 +357,7 @@ function UserCard({ dashboard, user }) {
           href={`https://retroachievements.org/user/${user.username}`}
           target="_blank"
         >
-          {user.avatar && <img src={user.avatar} alt="" />}
+          {user.avatar && <img src={avatarUrl(user)} alt="" />}
           <span>
             <strong>{user.displayUsername || user.username}</strong>
             <small>
@@ -383,6 +384,13 @@ function UserCard({ dashboard, user }) {
 
 function getProgress(progress, username, gameId) {
   return progress?.[username]?.[gameId] ?? progress?.[username]?.[String(gameId)]
+}
+
+function avatarUrl(user) {
+  if (!user.avatar) return ''
+
+  const separator = user.avatar.includes('?') ? '&' : '?'
+  return `${user.avatar}${separator}v=${encodeURIComponent(user.fetchedAt ?? '')}`
 }
 
 function getGameProgressStats(dashboard, username, game) {
