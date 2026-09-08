@@ -97,8 +97,9 @@ async function refreshExpiredData(db, apiKey) {
           { u: username, i: gameIds.join(','), y: apiKey },
           { allowNotFound: true },
         )
+        const awards = await fetchUserAwards(apiKey, username)
 
-        await upsertProgressSet(db, username, progress, now)
+        await upsertProgressSet(db, username, progress, awards, now)
         summary.progressFetched += 1
       }
     }
@@ -168,6 +169,8 @@ async function buildDashboardFromDb(db, source) {
       scoreAchieved: row.scoreAchieved,
       numAchievedHardcore: row.numAchievedHardcore,
       scoreAchievedHardcore: row.scoreAchievedHardcore,
+      beaten: Boolean(row.beaten),
+      mastered: Boolean(row.mastered),
     }
   }
 
@@ -337,6 +340,7 @@ async function allProgress(db) {
         score_achieved AS scoreAchieved,
         num_achieved_hardcore AS numAchievedHardcore,
         score_achieved_hardcore AS scoreAchievedHardcore,
+        beaten, mastered,
         fetched_at AS fetchedAt
        FROM user_progress`,
     )
@@ -345,7 +349,27 @@ async function allProgress(db) {
   return results
 }
 
-async function upsertProgressSet(db, username, progress, fetchedAt) {
+async function fetchUserAwards(apiKey, username) {
+  const awards = await fetchRa(
+    'API_GetUserAwards.php',
+    { u: username, y: apiKey },
+    { allowNotFound: true },
+  )
+  const beatenGameIds = new Set()
+  const masteredGameIds = new Set()
+
+  for (const award of awards?.VisibleUserAwards ?? []) {
+    const gameId = Number(award.AwardData)
+    if (!gameIds.includes(gameId)) continue
+
+    if (award.AwardType === 'Game Beaten') beatenGameIds.add(gameId)
+    if (award.AwardType === 'Mastery/Completion') masteredGameIds.add(gameId)
+  }
+
+  return { beatenGameIds, masteredGameIds }
+}
+
+async function upsertProgressSet(db, username, progress, awards, fetchedAt) {
   for (const gameId of gameIds) {
     const row = progress?.[gameId] ?? progress?.[String(gameId)] ?? {}
     await db
@@ -353,8 +377,8 @@ async function upsertProgressSet(db, username, progress, fetchedAt) {
         `INSERT OR REPLACE INTO user_progress
           (username, game_id, num_possible_achievements, possible_score,
            num_achieved, score_achieved, num_achieved_hardcore,
-           score_achieved_hardcore, fetched_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           score_achieved_hardcore, beaten, mastered, fetched_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(
         username,
@@ -365,6 +389,8 @@ async function upsertProgressSet(db, username, progress, fetchedAt) {
         Number(readRaField(row, 'scoreAchieved', 'ScoreAchieved')),
         Number(readRaField(row, 'numAchievedHardcore', 'NumAchievedHardcore')),
         Number(readRaField(row, 'scoreAchievedHardcore', 'ScoreAchievedHardcore')),
+        awards.beatenGameIds.has(gameId) ? 1 : 0,
+        awards.masteredGameIds.has(gameId) ? 1 : 0,
         fetchedAt,
       )
       .run()

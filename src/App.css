@@ -507,6 +507,34 @@
   font-size: 1.08rem;
 }
 
+.progress-fraction-row {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.35rem;
+  line-height: 1;
+  min-width: 0;
+}
+
+.award-dots {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.22rem;
+  min-height: 0.6rem;
+}
+
+.award-dot {
+  border-radius: 999px;
+  display: inline-block;
+  height: 0.86em;
+  position: relative;
+  top: 0.12em;
+  width: 0.86em;
+}
+
+.award-dot.is-beaten {
+  background: #c7cbd1;
+}
+
 .progress-inline {
   align-items: center;
   display: grid;
@@ -650,10 +678,12 @@
 }
 
 .mobile-game-progress {
+  border-radius: 4px;
   display: grid;
   justify-items: end;
   line-height: 1.1;
-  min-width: 3.4rem;
+  min-width: 4.25rem;
+  padding: 0.25rem 0.35rem;
 }
 
 .mobile-game-progress strong {

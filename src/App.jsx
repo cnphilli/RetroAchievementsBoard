@@ -234,6 +234,7 @@ function MobileAchievementLayout({ dashboard }) {
             <div className="mobile-game-list">
               {dashboard.games.map((game) => {
                 const stats = getGameProgressStats(dashboard, user.username, game)
+                const progress = getProgress(dashboard.progress, user.username, game.id)
 
                 return (
                   <a
@@ -248,9 +249,12 @@ function MobileAchievementLayout({ dashboard }) {
                       <small>{game.system}</small>
                     </span>
                     <span className="mobile-game-progress">
-                      <strong>
-                        {stats.achieved}/{stats.possible}
-                      </strong>
+                      <span className="progress-fraction-row">
+                        <strong>
+                          {stats.achieved}/{stats.possible}
+                        </strong>
+                        <AwardDots progress={progress} />
+                      </span>
                       <small>{stats.percent}%</small>
                     </span>
                   </a>
@@ -327,9 +331,12 @@ function AchievementTable({ dashboard }) {
 
               return (
                 <div className="progress-cell" key={`${user.username}-${game.id}`}>
-                  <strong>
-                    {achieved}/{possible}
-                  </strong>
+                  <div className="progress-fraction-row">
+                    <strong>
+                      {achieved}/{possible}
+                    </strong>
+                    <AwardDots progress={progress} />
+                  </div>
                   <div className="progress-inline">
                     <span>{percent}%</span>
                     <div className="meter" aria-hidden="true">
@@ -343,6 +350,16 @@ function AchievementTable({ dashboard }) {
         </div>
       </div>
     </div>
+  )
+}
+
+function AwardDots({ progress }) {
+  const isBeaten = progress?.beaten || progress?.mastered
+
+  return (
+    <span className="award-dots" aria-label={awardLabel(progress)}>
+      {isBeaten && <span className="award-dot is-beaten" />}
+    </span>
   )
 }
 
@@ -391,6 +408,11 @@ function avatarUrl(user) {
 
   const separator = user.avatar.includes('?') ? '&' : '?'
   return `${user.avatar}${separator}v=${encodeURIComponent(user.fetchedAt ?? '')}`
+}
+
+function awardLabel(progress) {
+  if (progress?.beaten || progress?.mastered) return 'Beaten'
+  return 'Not beaten'
 }
 
 function getGameProgressStats(dashboard, username, game) {
