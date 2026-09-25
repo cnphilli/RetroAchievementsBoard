@@ -196,10 +196,14 @@ function RaceTrack({ entries }) {
 }
 
 function MobileAchievementLayout({ dashboard }) {
+  const [expandedUsers, setExpandedUsers] = useState({})
+
   return (
     <div className="mobile-achievement-layout">
       {dashboard.users.map((user) => {
         const total = getUserTotal(dashboard, user)
+        const isExpanded = Boolean(expandedUsers[user.username])
+        const gameListId = `mobile-games-${user.username}`
 
         return (
           <section className="mobile-user-section" key={user.username}>
@@ -208,6 +212,9 @@ function MobileAchievementLayout({ dashboard }) {
                 className="mobile-user-link"
                 href={`https://retroachievements.org/user/${user.username}`}
                 target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`View ${user.displayUsername || user.username}'s RetroAchievements profile`}
+                title="View RetroAchievements profile"
               >
                 {user.avatar && <img src={avatarUrl(user)} alt="" />}
                 <span>
@@ -219,19 +226,36 @@ function MobileAchievementLayout({ dashboard }) {
                   </small>
                 </span>
               </a>
-              <div className="mobile-user-total">
-                <strong>{total.percent}%</strong>
-                <span>
-                  {total.achieved}/{total.possible}
+              <button
+                className="mobile-user-toggle"
+                type="button"
+                aria-expanded={isExpanded}
+                aria-controls={gameListId}
+                aria-label={`${isExpanded ? 'Hide' : 'Show'} games for ${user.displayUsername || user.username}`}
+                onClick={() =>
+                  setExpandedUsers((current) => ({
+                    ...current,
+                    [user.username]: !current[user.username],
+                  }))
+                }
+              >
+                <span className="mobile-user-total">
+                  <strong>{total.percent}%</strong>
+                  <span>
+                    {total.achieved}/{total.possible}
+                  </span>
                 </span>
-              </div>
+                <span className="mobile-user-disclosure" aria-hidden="true">
+                  {isExpanded ? '−' : '+'}
+                </span>
+              </button>
             </div>
 
             <div className="mobile-total-meter meter" aria-hidden="true">
               <div style={{ width: `${total.percent}%` }} />
             </div>
 
-            <div className="mobile-game-list">
+            <div className="mobile-game-list" id={gameListId} hidden={!isExpanded}>
               {dashboard.games.map((game) => {
                 const stats = getGameProgressStats(dashboard, user.username, game)
                 const progress = getProgress(dashboard.progress, user.username, game.id)
