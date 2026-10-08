@@ -262,7 +262,7 @@ function MobileAchievementLayout({ dashboard }) {
 
                 return (
                   <a
-                    className="mobile-game-row"
+                    className={`mobile-game-row${progress?.mastered ? ' is-mastered' : ''}`}
                     href={`https://retroachievements.org/game/${game.id}`}
                     key={`${user.username}-${game.id}`}
                     target="_blank"
@@ -342,8 +342,8 @@ function AchievementTable({ dashboard }) {
             gridTemplateColumns: `repeat(${dashboard.games.length}, var(--game-col-width))`,
           }}
         >
-          {dashboard.users.map((user) =>
-            dashboard.games.map((game) => {
+          {dashboard.users.map((user, userIndex) =>
+            dashboard.games.map((game, gameIndex) => {
               const progress = getProgress(dashboard.progress, user.username, game.id)
               const achieved = Number(
                 progress?.numAchievedHardcore ?? progress?.numAchieved ?? 0,
@@ -354,7 +354,15 @@ function AchievementTable({ dashboard }) {
               const percent = possible ? Math.round((achieved / possible) * 100) : 0
 
               return (
-                <div className="progress-cell" key={`${user.username}-${game.id}`}>
+                <div
+                  className={[
+                    'progress-cell',
+                    userIndex === dashboard.users.length - 1 && 'is-last-user',
+                    gameIndex === dashboard.games.length - 1 && 'is-last-game',
+                    progress?.mastered && 'is-mastered',
+                  ].filter(Boolean).join(' ')}
+                  key={`${user.username}-${game.id}`}
+                >
                   <div className="progress-fraction-row">
                     <strong>
                       {achieved}/{possible}
@@ -435,7 +443,8 @@ function avatarUrl(user) {
 }
 
 function awardLabel(progress) {
-  if (progress?.beaten || progress?.mastered) return 'Beaten'
+  if (progress?.mastered) return 'Mastered'
+  if (progress?.beaten) return 'Beaten'
   return 'Not beaten'
 }
 
